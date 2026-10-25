@@ -1,0 +1,19 @@
+# Compiled binary (GnuCOBOL output)
+run_processor
+*.o
+*.so
+*.dylib
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Generated report (optional - keep if you want to show it)
+# data/FLIGHT-REPORT.rpt
