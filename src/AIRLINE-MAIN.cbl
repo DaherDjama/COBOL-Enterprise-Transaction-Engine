@@ -1,0 +1,159 @@
+IDENTIFICATION DIVISION.
+       PROGRAM-ID. AIRLINE-MAIN.
+       AUTHOR. DJAMA AHMED DAHER.
+       DATE-WRITTEN. 2026-10-25.
+      *
+      * Global Airline Transaction Processor
+      * Batch processing engine for passenger bookings
+      *
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT PASSENGER-FILE ASSIGN TO "data/FLIGHT-INPUT.dat"
+                  ORGANIZATION IS LINE SEQUENTIAL
+                  FILE STATUS IS WS-INPUT-STATUS.
+           SELECT REPORT-FILE ASSIGN TO "data/FLIGHT-REPORT.rpt"
+                  ORGANIZATION IS LINE SEQUENTIAL
+                  FILE STATUS IS WS-OUTPUT-STATUS.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD  PASSENGER-FILE.
+       01  INPUT-RECORD.
+           COPY "RECORD-DEF.cpy" REPLACING
+               ==PASSENGER-RECORD== BY ==INPUT-PASSENGER-RECORD==.
+
+       FD  REPORT-FILE.
+       01  OUTPUT-RECORD.
+           COPY "RECORD-DEF.cpy" REPLACING
+               ==REPORT-RECORD== BY ==OUTPUT-REPORT-RECORD==.
+
+       WORKING-STORAGE SECTION.
+       01  WS-INPUT-STATUS      PIC XX.
+       01  WS-OUTPUT-STATUS     PIC XX.
+       01  WS-EOF-FLAG          PIC 9 VALUE 0.
+           88  END-OF-FILE      VALUE 1.
+       01  WS-RECORD-COUNT      PIC 9(5) VALUE 0.
+       01  WS-TOTAL-REVENUE     PIC 9(9)V99 VALUE 0.
+       01  WS-TOTAL-DISCOUNTS   PIC 9(9)V99 VALUE 0.
+       01  WS-TOTAL-TAX         PIC 9(9)V99 VALUE 0.
+       01  WS-TOTAL-MILES       PIC 9(9) VALUE 0.
+
+       01  WS-CALCULATED-FARE.
+           05  WS-DISCOUNT-AMT  PIC 9(5)V99.
+           05  WS-TAX-AMT       PIC 9(5)V99.
+           05  WS-FINAL-PRICE   PIC 9(5)V99.
+           05  WS-MILES-EARNED  PIC 9(6).
+
+       01  WS-REPORT-HEADER.
+           05  FILLER           PIC X(50) VALUE
+               "GLOBAL AIRLINES - TRANSACTION REPORT".
+           05  FILLER           PIC X(30) VALUE SPACES.
+
+       01  WS-COLUMN-HEADER.
+           05  FILLER           PIC X(30) VALUE "PASSENGER NAME".
+           05  FILLER           PIC X(10) VALUE "ID".
+           05  FILLER           PIC X(5)  VALUE "TIER".
+           05  FILLER           PIC X(5)  VALUE "CLASS".
+           05  FILLER           PIC X(12) VALUE "BASE FARE".
+           05  FILLER           PIC X(12) VALUE "DISCOUNT".
+           05  FILLER           PIC X(12) VALUE "TAX".
+           05  FILLER           PIC X(12) VALUE "FINAL PRICE".
+           05  FILLER           PIC X(10) VALUE "MILES".
+
+       01  WS-SEPARATOR-LINE.
+           05  FILLER           PIC X(120) VALUE ALL "-".
+
+       PROCEDURE DIVISION.
+       MAIN-PROGRAM.
+           PERFORM INITIALIZE-FILES
+           PERFORM PROCESS-TRANSACTIONS
+           PERFORM GENERATE-SUMMARY
+           PERFORM CLOSE-FILES
+           STOP RUN.
+
+       INITIALIZE-FILES.
+           OPEN INPUT PASSENGER-FILE
+           IF WS-INPUT-STATUS NOT = "00"
+               DISPLAY "ERROR: Cannot open input file: "
+                       WS-INPUT-STATUS
+               STOP RUN
+           END-IF
+
+           OPEN OUTPUT REPORT-FILE
+           IF WS-OUTPUT-STATUS NOT = "00"
+               DISPLAY "ERROR: Cannot open output file: "
+                       WS-OUTPUT-STATUS
+               STOP RUN
+           END-IF
+
+           WRITE OUTPUT-RECORD FROM WS-REPORT-HEADER
+           WRITE OUTPUT-RECORD FROM WS-SEPARATOR-LINE
+           WRITE OUTPUT-RECORD FROM WS-COLUMN-HEADER
+           WRITE OUTPUT-RECORD FROM WS-SEPARATOR-LINE.
+
+       PROCESS-TRANSACTIONS.
+           PERFORM UNTIL END-OF-FILE
+               READ PASSENGER-FILE
+                   AT END
+                       SET END-OF-FILE TO TRUE
+                   NOT AT END
+                       PERFORM PROCESS-SINGLE-TRANSACTION
+               END-READ
+           END-PERFORM.
+
+       PROCESS-SINGLE-TRANSACTION.
+           ADD 1 TO WS-RECORD-COUNT
+
+           CALL "COMP-FARES" USING
+               INPUT-PASSENGER-RECORD
+               WS-CALCULATED-FARE
+           END-CALL
+
+           MOVE INPUT-PASSENGER-NAME TO RR-PASSENGER-NAME
+           MOVE INPUT-PASSENGER-ID TO RR-PASSENGER-ID
+           MOVE INPUT-LOYALTY-TIER TO RR-LOYALTY-TIER
+           MOVE INPUT-TICKET-CLASS TO RR-TICKET-CLASS
+           MOVE INPUT-BASE-FARE TO RR-BASE-FARE
+           MOVE WS-DISCOUNT-AMT TO RR-DISCOUNT
+           MOVE WS-TAX-AMT TO RR-TAX
+           MOVE WS-FINAL-PRICE TO RR-FINAL-PRICE
+           MOVE WS-MILES-EARNED TO RR-MILES-EARNED
+
+           WRITE OUTPUT-RECORD
+
+           ADD WS-FINAL-PRICE TO WS-TOTAL-REVENUE
+           ADD WS-DISCOUNT-AMT TO WS-TOTAL-DISCOUNTS
+           ADD WS-TAX-AMT TO WS-TOTAL-TAX
+           ADD WS-MILES-EARNED TO WS-TOTAL-MILES.
+
+       GENERATE-SUMMARY.
+           WRITE OUTPUT-RECORD FROM WS-SEPARATOR-LINE
+           MOVE SPACES TO OUTPUT-RECORD
+           STRING "TOTAL TRANSACTIONS: " WS-RECORD-COUNT
+               DELIMITED BY SIZE INTO OUTPUT-RECORD
+           WRITE OUTPUT-RECORD
+           MOVE SPACES TO OUTPUT-RECORD
+           STRING "TOTAL REVENUE: $" WS-TOTAL-REVENUE
+               DELIMITED BY SIZE INTO OUTPUT-RECORD
+           WRITE OUTPUT-RECORD
+           MOVE SPACES TO OUTPUT-RECORD
+           STRING "TOTAL DISCOUNTS: $" WS-TOTAL-DISCOUNTS
+               DELIMITED BY SIZE INTO OUTPUT-RECORD
+           WRITE OUTPUT-RECORD
+           MOVE SPACES TO OUTPUT-RECORD
+           STRING "TOTAL TAX COLLECTED: $" WS-TOTAL-TAX
+               DELIMITED BY SIZE INTO OUTPUT-RECORD
+           WRITE OUTPUT-RECORD
+           MOVE SPACES TO OUTPUT-RECORD
+           STRING "TOTAL MILES AWARDED: " WS-TOTAL-MILES
+               DELIMITED BY SIZE INTO OUTPUT-RECORD
+           WRITE OUTPUT-RECORD
+           WRITE OUTPUT-RECORD FROM WS-SEPARATOR-LINE.
+
+       CLOSE-FILES.
+           CLOSE PASSENGER-FILE
+           CLOSE REPORT-FILE
+           DISPLAY "Processing complete. " WS-RECORD-COUNT
+                   " transactions processed."
+           DISPLAY "Report generated: data/FLIGHT-REPORT.rpt".
