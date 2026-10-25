@@ -1,16 +1,23 @@
 # COBOL Enterprise Transaction Engine
 
-## Global Airline Transaction Processor
+A production-simulated, modular COBOL batch-processing engine built to demonstrate core mainframe logic layout concepts. The system handles overnight sequential ledger data files, matches corporate frequent-flyer profiles, executes transactional rate computations via external subprograms, and exports a structured audit ledger.
 
-A production-grade batch processing engine built in COBOL that simulates mainframe transaction processing for airline passenger bookings.
+## 🏗️ Architectural Blueprint
 
-## Features
+The engine utilizes a decoupled structure mirroring high-volume banking systems:
+* **`src/AIRLINE-MAIN.cbl`**: Main transaction workflow, file handling routines, loops, and control parameters.
+* **`src/COMP-FARES.cbl`**: Independent subprogram executing critical enterprise business logic.
+* **`src/RECORD-DEF.cpy`**: Standardized copybook data layouts shared across both applications to preserve parameter alignment.
+* **`data/FLIGHT-INPUT.dat`**: Flat input database stream simulating corporate batch queue dumps.
 
-- **Sequential File Processing**: Reads passenger data from flat files
-- **Loyalty Tier Discounts**: Calculates discounts based on frequent flyer status (Bronze/Silver/Gold/Platinum)
-- **Dynamic Tax Calculation**: Applies tax rates based on ticket class
-- **Mileage Awards**: Computes frequent flyer miles earned
-- **Modular Architecture**: Uses subprograms and copybooks for maintainability
-- **Financial Reporting**: Generates formatted transaction reports
+## 🛠️ Local Environment & Compilation
 
-## Project Structure
+The project is compiled and tested using **GnuCOBOL 3.2** in modern free-format context layout modes:
+
+```bash
+# Compilation Command
+cobc -x -free -o run_processor -I src src/AIRLINE-MAIN.cbl src/COMP-FARES.cbl
+
+# Execution Command
+./run_processor
+```
