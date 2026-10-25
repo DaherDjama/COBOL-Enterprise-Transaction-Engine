@@ -1,0 +1,5 @@
+                                       .00  0100
+cat << 'EOF' > data/  FLIGHT-INP  T.dat.00  0100
+Djama Ahmed Daher     PLATINUM    01000.00  1000
+John Doe              GOLD        00765.45  0500
+Jane Smith            BRONZE      00500.00  0100
